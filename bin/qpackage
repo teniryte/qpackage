@@ -20,8 +20,13 @@ async function start() {
   createLib(options);
   createTest(options);
   installDependencies(options);
+  setupRepository(options);
 
   process.exit(0);
+}
+
+function setupRepository(options) {
+  console.log('OPTIONS', options);
 }
 
 async function getOptions() {
@@ -120,6 +125,10 @@ function createFiles(options) {
         .replace(/\{\{authorEmail\}\}/mgi, options.authorEmail)
     );
   });
+  fs.writeFileSync(
+    path.resolve(options.dir, '.gitignore'),
+    fs.readFileSync(path.resolve(__dirname, '../template/.gitignore'), 'utf-8')
+  );
 }
 
 function createDir(options) {
