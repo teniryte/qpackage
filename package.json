@@ -1,6 +1,6 @@
 {
   "name": "qpackage",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "main": "./lib/index.js",
   "description": "Node.js package template",
   "keywords": [
@@ -9,7 +9,7 @@
     "template"
   ],
   "bin": {
-    "iconic": "./bin/qpackage"
+    "qpackage": "./bin/qpackage"
   },
   "homepage": "https://github.com/teniryte/qpackage",
   "license": "MIT",
