@@ -1,0 +1,33 @@
+{
+  "name": "qpackage",
+  "version": "0.1.1",
+  "main": "./lib/index.js",
+  "description": "Tools for SVG icons",
+  "keywords": [
+    "package",
+    "npm",
+    "template"
+  ],
+  "bin": {
+    "iconic": "./bin/qpackage"
+  },
+  "homepage": "https://github.com/teniryte/qpackage",
+  "license": "MIT",
+  "dependencies": {
+    "convert-svg-to-jpeg": "^0.5.0",
+    "convert-svg-to-png": "^0.5.0",
+    "ooi": "^0.1.61",
+    "svgo": "^2.3.0"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/mocha ./test/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:teniryte/iconic.git"
+  },
+  "author": {
+    "name": "teniryte",
+    "email": "teniryte@gmail.com"
+  }
+}
