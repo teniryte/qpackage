@@ -1,0 +1,182 @@
+#!/usr/bin/env node
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+const readline = require('readline');
+const childProcess = require('child_process');
+
+start()
+  .then(() => {})
+  .catch(err => console.log('Error:', err));
+
+async function start() {  
+  let rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    }),
+    options = mergeOptions(getGlobalOptions(), {
+      parentDir: process.cwd(),
+      name: await question('Package name', process.argv[2]),
+      authorUsername: await question('Author username'),
+      authorEmail: await question('Author email'),
+      year: (new Date()).getFullYear(),
+      version: '0.0.1',
+      description: await question('Description'),
+      keywords: (await question('Keywords'))
+        .split(' ')
+        .map(word => word.trim())
+        .filter(word => !!word),
+      homepage: await question('Homepage'),
+      license: await question('License', 'MIT'),
+      repository: await question('Repository'),
+      dependencies: (await question('Dependencies'))
+        .split(' ')
+        .map(dep => dep.trim())
+        .filter(dep => !!dep),
+      bin: (await question('Bin (y/n)')) === 'y',
+    });
+
+  await create(options);
+
+  process.exit(0);
+  
+  function question(question = '', defaultValue = '') {
+    let message = `${question}${defaultValue ? ` (${defaultValue})` : ''}: `;
+    return new Promise((resolve, reject) => {
+      rl.question(message, value => {
+        resolve(value || defaultValue || '');
+      });
+    });
+  }
+}
+
+async function create(options) {
+  createDir(options);
+  createPackage(options);
+  createFiles(options);
+  createBin(options);
+  createLib(options);
+  createTest(options);
+  installDependencies(options);
+}
+
+function installDependencies(options) {
+  childProcess.execSync(`yarn`, {
+    cwd: path.resolve(options.dir),
+    stdio: 'inherit',
+  });
+}
+
+function createTest(options) {
+  fs.mkdirSync(path.resolve(options.dir, 'test'));
+  fs.writeFileSync(
+    path.resolve(options.dir, `test/index.js`),
+    `'use strict';\n`
+  );
+}
+
+function createLib(options) {
+  fs.mkdirSync(path.resolve(options.dir, 'lib'));
+  fs.writeFileSync(
+    path.resolve(options.dir, `lib/index.js`),
+    `'use strict';\n\nmodule.exports = {\n\n};`
+  );
+}
+
+function createBin(options) {
+  if (!options.bin) return options;
+  let filename = path.resolve(options.dir, `bin/${options.name}`);
+  fs.mkdirSync(path.resolve(options.dir, 'bin'));
+  fs.writeFileSync(
+    filename,
+    `#!/usr/bin/env node\n'use strict';\n`
+  );
+  fs.chmodSync(filename, 0o777);
+}
+
+function createFiles(options) {
+  let files = fs.readdirSync(path.resolve(__dirname, '../template'));
+  files.forEach(file => {
+    fs.writeFileSync(
+      path.resolve(options.dir, file),
+      fs.readFileSync(
+        path.resolve(__dirname, '../template', file),
+        'utf-8'
+      )
+        .replace(/\{\{name\}\}/mgi, options.name)
+        .replace(/\{\{description\}\}/mgi, options.description)
+        .replace(/\{\{authorUsername\}\}/mgi, options.authorUsername)
+        .replace(/\{\{authorEmail\}\}/mgi, options.authorEmail)
+    );
+  });
+}
+
+function createDir(options) {
+  let dir = path.resolve(options.parentDir, options.name);
+  if (fs.existsSync(dir)) {
+    return console.log(`Directory «${dir}» already exists!`);
+  }
+  fs.mkdirSync(dir);
+  options.dir = dir;
+  return dir;
+}
+
+function createPackage(options) {
+  let data = {
+    name: options.name,
+    version: options.version,
+    main: './lib/index.js',
+    description: options.description,
+    keywords: options.keywords,
+    homepage: options.homepage,
+    license: options.license,
+    dependencies: options.dependencies,
+    devDependencies: {
+      jest: '^26.6.3',
+    },
+    scripts: {
+      'test': 'node ./node_modules/.bin/jest',
+    },
+    author: {
+      'name': options.authorUsername,
+      'email': options.authorEmail,
+    },
+    repository: {
+      type: 'git',
+      url: options.repository ||
+        `git@${options.repo.host}:` +
+          `${options.repo.user}/` +
+          `${options.name}.git`
+    },
+  };
+  if (options.bin) {
+    data.bin = {
+      [options.name]: `./bin/${options.name}`
+    };
+  }
+  fs.writeFileSync(
+    path.resolve(options.dir, 'package.json'),
+    JSON.stringify(data, null, 2)
+  );
+}
+
+function mergeOptions(...datas) {
+  let options = {};
+  datas.forEach(data => {
+    Object.keys(data).forEach(key => {
+      let value = data[key];
+      if (!value) return;
+      options[key] = value;
+    });
+  });
+  return options;
+}
+
+function getGlobalOptions() {
+  try {
+    return require(`${process.env.HOME}/.qpackage.json`);
+  } catch(err) {
+    return {};
+  }
+}
