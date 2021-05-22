@@ -11,36 +11,55 @@ start()
   .catch(err => console.log('Error:', err));
 
 async function start() {  
-  let rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-    }),
-    options = mergeOptions(getGlobalOptions(), {
-      parentDir: process.cwd(),
-      name: await question('Package name', process.argv[2]),
-      authorUsername: await question('Author username'),
-      authorEmail: await question('Author email'),
-      year: (new Date()).getFullYear(),
-      version: '0.0.1',
-      description: await question('Description'),
-      keywords: (await question('Keywords'))
-        .split(' ')
-        .map(word => word.trim())
-        .filter(word => !!word),
-      homepage: await question('Homepage'),
-      license: await question('License', 'MIT'),
-      repository: await question('Repository'),
-      dependencies: (await question('Dependencies'))
-        .split(' ')
-        .map(dep => dep.trim())
-        .filter(dep => !!dep),
-      bin: (await question('Bin (y/n)')) === 'y',
-    });
+  let options = await getOptions();
 
-  await create(options);
+  createDir(options);
+  createPackage(options);
+  createFiles(options);
+  createBin(options);
+  createLib(options);
+  createTest(options);
+  installDependencies(options);
 
   process.exit(0);
-  
+}
+
+async function getOptions() {
+  let rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  }),
+  defaultOptions = getDefaultOptions(),
+  options = mergeOptions(defaultOptions, {
+    parentDir: process.cwd(),
+    name: await question('Package name', process.argv[2]),
+    authorUsername: await question(
+      'Author username',
+      defaultOptions.authorUsername
+    ),
+    authorEmail: await question(
+      'Author email',
+      defaultOptions.authorEmail
+    ),
+    year: (new Date()).getFullYear(),
+    version: '0.0.1',
+    description: await question('Description'),
+    keywords: (await question('Keywords'))
+      .split(' ')
+      .map(word => word.trim())
+      .filter(word => !!word),
+    homepage: await question('Homepage'),
+    license: await question('License', defaultOptions.LICENSE || 'MIT'),
+    repository: await question('Repository'),
+    dependencies: (await question('Dependencies'))
+      .split(' ')
+      .map(dep => dep.trim())
+      .filter(dep => !!dep),
+    bin: (await question('Bin (y/n)')) === 'y',
+  });
+
+  return options;
+
   function question(question = '', defaultValue = '') {
     let message = `${question}${defaultValue ? ` (${defaultValue})` : ''}: `;
     return new Promise((resolve, reject) => {
@@ -51,17 +70,8 @@ async function start() {
   }
 }
 
-async function create(options) {
-  createDir(options);
-  createPackage(options);
-  createFiles(options);
-  createBin(options);
-  createLib(options);
-  createTest(options);
-  installDependencies(options);
-}
-
 function installDependencies(options) {
+  if (!options.dependencies.length) return options;
   childProcess.execSync(`yarn add ${options.dependencies.join(' ')}`, {
     cwd: path.resolve(options.dir),
     stdio: 'inherit',
@@ -173,7 +183,7 @@ function mergeOptions(...datas) {
   return options;
 }
 
-function getGlobalOptions() {
+function getDefaultOptions() {
   try {
     return require(`${process.env.HOME}/.qpackage.json`);
   } catch(err) {
