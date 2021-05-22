@@ -62,7 +62,7 @@ async function create(options) {
 }
 
 function installDependencies(options) {
-  childProcess.execSync(`yarn`, {
+  childProcess.execSync(`yarn add ${options.dependencies.join(' ')}`, {
     cwd: path.resolve(options.dir),
     stdio: 'inherit',
   });
@@ -131,7 +131,7 @@ function createPackage(options) {
     keywords: options.keywords,
     homepage: options.homepage,
     license: options.license,
-    dependencies: options.dependencies,
+    dependencies: {},
     devDependencies: {
       jest: '^26.6.3',
     },
