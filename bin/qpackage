@@ -125,9 +125,9 @@ function createFiles(options) {
         .replace(/\{\{authorEmail\}\}/mgi, options.authorEmail)
     );
   });
-  fs.writeFileSync(
-    path.resolve(options.dir, '.gitignore'),
-    fs.readFileSync(path.resolve(__dirname, '../template/.gitignore'), 'utf-8')
+  fs.renameSync(
+    path.resolve(options.dir, 'gitignore'),
+    path.resolve(options.dir, '.gitignore')
   );
 }
 
