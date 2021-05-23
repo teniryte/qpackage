@@ -1,6 +1,6 @@
 {
   "name": "qpackage",
-  "version": "0.1.13",
+  "version": "0.1.1",
   "main": "./lib/index.js",
   "description": "Node.js package template",
   "keywords": [
