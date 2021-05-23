@@ -1,6 +1,6 @@
 {
   "name": "qpackage",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "main": "./lib/index.js",
   "description": "Node.js package template",
   "keywords": [
@@ -15,6 +15,9 @@
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {},
+  "publishConfig": {
+    "registry": "https://pm.cort.one"
+  },
   "scripts": {
     "test": "node ./node_modules/.bin/jest"
   },
