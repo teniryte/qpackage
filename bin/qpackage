@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-nocheck
 'use strict';
 
 const fs = require('fs');
@@ -25,10 +26,6 @@ async function start() {
   process.exit(0);
 }
 
-function setupRepository(options) {
-  console.log('OPTIONS', options);
-}
-
 async function getOptions() {
   let rl = readline.createInterface({
     input: process.stdin,
@@ -38,6 +35,7 @@ async function getOptions() {
   options = mergeOptions(defaultOptions, {
     parentDir: process.cwd(),
     name: await question('Package name', process.argv[2]),
+    scope: await question('Scope', defaultOptions.scope),
     authorUsername: await question(
       'Author username',
       defaultOptions.authorUsername
@@ -61,6 +59,8 @@ async function getOptions() {
       .map(dep => dep.trim())
       .filter(dep => !!dep),
     bin: (await question('Bin (y/n)')) === 'y',
+    publish: (await question('Publish (y/n)')) === 'y',
+    registry: await question('Registry', defaultOptions.registry),
   });
 
   return options;
@@ -73,6 +73,29 @@ async function getOptions() {
       });
     });
   }
+}
+
+function setupRepository(options) {
+  if (!options.repository) return options;
+  let execOptions = {
+      cwd: options.dir,
+      stdio: 'inherit',
+    },
+    packageData = require(
+      path.resolve(options.dir, 'package.json')
+    ),
+    version = packageData.version,
+    commands = [
+      `git init`,
+      `git remote add origin ${options.repository}`,
+      `git add . --all`,
+      `git commit -m 'Init'`,
+      `git push -u origin master`,
+      options.publish ? `yarn publish --new-version ${version}` : null,
+    ];
+  commands.filter(command => !!command).forEach(command => {
+    childProcess.execSync(command, execOptions);
+  });
 }
 
 function installDependencies(options) {
@@ -142,8 +165,16 @@ function createDir(options) {
 }
 
 function createPackage(options) {
+  let data = getPackage(options);
+  fs.writeFileSync(
+    path.resolve(options.dir, 'package.json'),
+    JSON.stringify(data, null, 2)
+  );
+}
+
+function getPackage(options) {
   let data = {
-    name: options.name,
+    name: options.scope ? `${options.scope}/${options.name}` : options.name,
     version: options.version,
     main: './lib/index.js',
     description: options.description,
@@ -168,16 +199,17 @@ function createPackage(options) {
           `${options.repo.user}/` +
           `${options.name}.git`
     },
+    publish: options.publish,
+    publishConfig: {
+      registry: options.registry || 'http://registry.npmjs.org/'
+    },
   };
   if (options.bin) {
     data.bin = {
       [options.name]: `./bin/${options.name}`
     };
   }
-  fs.writeFileSync(
-    path.resolve(options.dir, 'package.json'),
-    JSON.stringify(data, null, 2)
-  );
+  return data;
 }
 
 function mergeOptions(...datas) {
@@ -193,9 +225,15 @@ function mergeOptions(...datas) {
 }
 
 function getDefaultOptions() {
-  try {
-    return require(`${process.env.HOME}/.qpackage.json`);
-  } catch(err) {
-    return {};
-  }
+  let files = [
+    path.resolve(process.env.HOME, '.qpackage.json'),
+    path.resolve(process.cwd(), '.qpackage.json'),
+  ],
+    defaultOptions = {};
+  files.forEach(file => {
+    try {
+      Object.assign(defaultOptions, require(file));
+    } catch(err) {}
+  });
+  return defaultOptions;
 }
