@@ -33,6 +33,7 @@ async function getOptions() {
   }),
   defaultOptions = getDefaultOptions(),
   name = await question('Package name', process.argv[2]),
+  argvDependencies = process.argv.slice(3),
   options = mergeOptions(defaultOptions, {
     parentDir: process.cwd(),
     name: name,
@@ -60,12 +61,14 @@ async function getOptions() {
         `${defaultOptions.repo.user}/` +
         `${name}.git`
     ),
-    dependencies: (await question('Dependencies'))
-      .split(' ')
-      .map(dep => dep.trim())
-      .filter(dep => !!dep),
-    bin: (await question('Bin (y/n)')) === 'y',
-    publish: (await question('Publish (y/n)')) === 'y',
+    dependencies: argvDependencies.length
+      ? argvDependencies
+      : (await question('Dependencies'))
+        .split(' ')
+        .map(dep => dep.trim())
+        .filter(dep => !!dep),
+    bin: (await question('Bin (y/n)', false)) === 'y',
+    publish: (await question('Publish y/n (n)')) === 'y',
     registry: await question('Registry', defaultOptions.registry),
   });
 
@@ -205,7 +208,7 @@ function getPackage(options) {
           `${options.repo.user}/` +
           `${options.name}.git`
     },
-    publish: options.publish,
+    publish: !!options.publish,
     publishConfig: {
       registry: options.registry || 'http://registry.npmjs.org/'
     },
@@ -231,15 +234,13 @@ function mergeOptions(...datas) {
 }
 
 function getDefaultOptions() {
-  let files = [
-    path.resolve(process.env.HOME, '.qpackage.json'),
-    path.resolve(process.cwd(), '.qpackage.json'),
-  ],
-    defaultOptions = {};
-  files.forEach(file => {
-    try {
-      Object.assign(defaultOptions, require(file));
-    } catch(err) {}
-  });
-  return defaultOptions;
+  let options = {},
+    dir = process.cwd();
+  while (dir !== '/' && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
+    let filename = path.resolve(dir, '.qpackage.json');
+    dir = path.resolve(dir, '..');
+    if (!fs.existsSync(filename) || !fs.statSync(filename)) continue;
+    Object.assign(options, require(filename));
+  }
+  return options;
 }
