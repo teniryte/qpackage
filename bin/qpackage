@@ -235,12 +235,16 @@ function mergeOptions(...datas) {
 
 function getDefaultOptions() {
   let options = {},
-    dir = process.cwd();
+    dir = process.cwd(),
+    files = [];
   while (dir !== '/' && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
     let filename = path.resolve(dir, '.qpackage.json');
     dir = path.resolve(dir, '..');
     if (!fs.existsSync(filename) || !fs.statSync(filename)) continue;
-    Object.assign(options, require(filename));
+    files.push(filename);
   }
+  files.reverse().forEach(filename => {
+    Object.assign(options, require(filename));
+  });
   return options;
 }
