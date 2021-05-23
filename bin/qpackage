@@ -32,9 +32,10 @@ async function getOptions() {
     output: process.stdout
   }),
   defaultOptions = getDefaultOptions(),
+  name = await question('Package name', process.argv[2]),
   options = mergeOptions(defaultOptions, {
     parentDir: process.cwd(),
-    name: await question('Package name', process.argv[2]),
+    name: name,
     scope: await question('Scope', defaultOptions.scope),
     authorUsername: await question(
       'Author username',
@@ -53,7 +54,12 @@ async function getOptions() {
       .filter(word => !!word),
     homepage: await question('Homepage'),
     license: await question('License', defaultOptions.LICENSE || 'MIT'),
-    repository: await question('Repository'),
+    repository: await question(
+      'Repository',
+      `git@${defaultOptions.repo.host}:` +
+        `${defaultOptions.repo.user}/` +
+        `${name}.git`
+    ),
     dependencies: (await question('Dependencies'))
       .split(' ')
       .map(dep => dep.trim())
@@ -76,6 +82,7 @@ async function getOptions() {
 }
 
 function setupRepository(options) {
+  console.log('OPTIONS', options);
   if (!options.repository) return options;
   let execOptions = {
       cwd: options.dir,
