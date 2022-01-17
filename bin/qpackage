@@ -10,11 +10,13 @@ const xyaml = require('xyaml');
 
 start()
   .then(() => {})
-  .catch(err => console.log('Error:', err));
+  .catch(err => console.log('Error:', err))
+  .finally(() => {
+    process.exit(1);
+  });
 
 async function start() {
-  let options = await getOptions();
-
+  const options = await getOptions();
   createDir(options);
   createPackage(options);
   createFiles(options);
@@ -23,8 +25,6 @@ async function start() {
   createTest(options);
   installDependencies(options);
   setupRepository(options);
-
-  process.exit(0);
 }
 
 async function getOptions() {
@@ -48,7 +48,7 @@ async function getOptions() {
       ),
       authorEmail: await question('Author email', defaultOptions.authorEmail),
       year: new Date().getFullYear(),
-      version: defaultOptions || '0.0.1',
+      version: await question('Version', defaultOptions.version || '0.0.1'),
       description: await question('Description', defaultOptions.description),
       keywords: (await question('Keywords', defaultOptions.keywords))
         .split(' ')
@@ -62,12 +62,6 @@ async function getOptions() {
           `${defaultOptions.repo.user}/` +
           `${name}.git`
       ),
-      dependencies: argvDependencies.length
-        ? argvDependencies
-        : (await question('Dependencies'))
-            .split(' ')
-            .map(dep => dep.trim())
-            .filter(dep => !!dep),
       dependencies: (
         await question(
           'Dependencies',
@@ -78,10 +72,29 @@ async function getOptions() {
         .split(' ')
         .map(dep => dep.trim())
         .filter(dep => !!dep),
-      bin: (await question('Bin (y/n)', defaultOptions.bin)) === 'y',
+      devDependencies: (
+        await question('Dev dependencies', defaultOptions.devDependencies)
+      )
+        .split(' ')
+        .map(dep => dep.trim())
+        .filter(dep => !!dep),
+      bin:
+        (await question('Generate binary script? Yes/No', defaultOptions.bin))
+          .trim()
+          .toLowerCase()[0] === 'y',
       publish:
-        (await question('Publish y/n (n)', defaultOptions.publish)) === 'y',
-      registry: await question('Registry', defaultOptions.registry),
+        (
+          await question(
+            'Publish packages automatically? Yes/No',
+            defaultOptions.publish
+          )
+        )
+          .trim()
+          .toLowerCase()[0] === 'y',
+      registry: await question(
+        'Registry',
+        defaultOptions.registry || 'https://registry.npmjs.org'
+      ),
     });
 
   return options;
@@ -234,7 +247,7 @@ function mergeOptions(...datas) {
   datas.forEach(data => {
     Object.keys(data).forEach(key => {
       let value = data[key];
-      if (!value) return;
+      if (value === undefined) return;
       options[key] = value;
     });
   });
@@ -255,6 +268,5 @@ function getDefaultOptions() {
   files.forEach(filename => {
     Object.assign(options, xyaml.loadFile(filename));
   });
-  console.log('OPTIONS', options);
   return options;
 }

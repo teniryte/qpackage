@@ -19,7 +19,7 @@
   },
   "devDependencies": {},
   "publishConfig": {
-    "registry": "https://pm.cort.one"
+    "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
     "test": "node ./node_modules/.bin/jest",

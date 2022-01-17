@@ -8,10 +8,10 @@ authorEmail: 'neo@gmail.com'
 authorGithub: 'https://github.com/neo/'
 homepage: 'https://neo.com'
 repo:
-  host: 'https://github.com'
+  host: 'github.com'
   user: 'neo'
-registry: 'https://registry.npm.org'
-publish: false
-bin: false
+registry: 'https://registry.npmjs.org'
+publish: 'n'
+bin: 'n'
 version: '0.0.1'
 keywords: 'code matrix'
