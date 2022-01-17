@@ -1,6 +1,6 @@
 {
   "name": "qpackage",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "main": "./lib/index.js",
   "description": "Node.js package template",
   "keywords": [
@@ -13,13 +13,17 @@
   },
   "homepage": "https://github.com/teniryte/qpackage",
   "license": "MIT",
-  "dependencies": {},
+  "dependencies": {
+    "colors": "^1.4.0",
+    "xyaml": "^0.1.8"
+  },
   "devDependencies": {},
   "publishConfig": {
     "registry": "https://pm.cort.one"
   },
   "scripts": {
-    "test": "node ./node_modules/.bin/jest"
+    "test": "node ./node_modules/.bin/jest",
+    "postinstall": "node ./scripts/postinstall.js"
   },
   "repository": {
     "type": "git",

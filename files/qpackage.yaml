@@ -1,0 +1,17 @@
+name: 'new-package'
+description: 'New Package Description'
+LICENSE: 'MIT'
+licenseAuthor: 'neo <neo@gmail.com>'
+licenseYears: ${new Date().getFullYear()}
+authorUsername: 'neo'
+authorEmail: 'neo@gmail.com'
+authorGithub: 'https://github.com/neo/'
+homepage: 'https://neo.com'
+repo:
+  host: 'https://github.com'
+  user: 'neo'
+registry: 'https://registry.npm.org'
+publish: false
+bin: false
+version: '0.0.1'
+keywords: 'code matrix'

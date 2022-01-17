@@ -6,12 +6,13 @@ const fs = require('fs');
 const path = require('path');
 const readline = require('readline');
 const childProcess = require('child_process');
+const xyaml = require('xyaml');
 
 start()
   .then(() => {})
   .catch(err => console.log('Error:', err));
 
-async function start() {  
+async function start() {
   let options = await getOptions();
 
   createDir(options);
@@ -28,49 +29,60 @@ async function start() {
 
 async function getOptions() {
   let rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-  }),
-  defaultOptions = getDefaultOptions(),
-  name = await question('Package name', process.argv[2]),
-  argvDependencies = process.argv.slice(3),
-  options = mergeOptions(defaultOptions, {
-    parentDir: process.cwd(),
-    name: name,
-    scope: await question('Scope', defaultOptions.scope),
-    authorUsername: await question(
-      'Author username',
-      defaultOptions.authorUsername
+      input: process.stdin,
+      output: process.stdout,
+    }),
+    defaultOptions = getDefaultOptions(),
+    name = await question(
+      'Package name',
+      process.argv[2] || defaultOptions.name
     ),
-    authorEmail: await question(
-      'Author email',
-      defaultOptions.authorEmail
-    ),
-    year: (new Date()).getFullYear(),
-    version: '0.0.1',
-    description: await question('Description'),
-    keywords: (await question('Keywords'))
-      .split(' ')
-      .map(word => word.trim())
-      .filter(word => !!word),
-    homepage: await question('Homepage'),
-    license: await question('License', defaultOptions.LICENSE || 'MIT'),
-    repository: await question(
-      'Repository',
-      `git@${defaultOptions.repo.host}:` +
-        `${defaultOptions.repo.user}/` +
-        `${name}.git`
-    ),
-    dependencies: argvDependencies.length
-      ? argvDependencies
-      : (await question('Dependencies'))
+    argvDependencies = process.argv.slice(3),
+    options = mergeOptions(defaultOptions, {
+      parentDir: process.cwd(),
+      name: name,
+      scope: await question('Scope', defaultOptions.scope),
+      authorUsername: await question(
+        'Author username',
+        defaultOptions.authorUsername
+      ),
+      authorEmail: await question('Author email', defaultOptions.authorEmail),
+      year: new Date().getFullYear(),
+      version: defaultOptions || '0.0.1',
+      description: await question('Description', defaultOptions.description),
+      keywords: (await question('Keywords', defaultOptions.keywords))
+        .split(' ')
+        .map(word => word.trim())
+        .filter(word => !!word),
+      homepage: await question('Homepage', defaultOptions.homepage),
+      license: await question('License', defaultOptions.LICENSE || 'MIT'),
+      repository: await question(
+        'Repository',
+        `git@${defaultOptions.repo.host}:` +
+          `${defaultOptions.repo.user}/` +
+          `${name}.git`
+      ),
+      dependencies: argvDependencies.length
+        ? argvDependencies
+        : (await question('Dependencies'))
+            .split(' ')
+            .map(dep => dep.trim())
+            .filter(dep => !!dep),
+      dependencies: (
+        await question(
+          'Dependencies',
+          (argvDependencies.length && argvDependencies) ||
+            defaultOptions.dependencies
+        )
+      )
         .split(' ')
         .map(dep => dep.trim())
         .filter(dep => !!dep),
-    bin: (await question('Bin (y/n)', false)) === 'y',
-    publish: (await question('Publish y/n (n)')) === 'y',
-    registry: await question('Registry', defaultOptions.registry),
-  });
+      bin: (await question('Bin (y/n)', defaultOptions.bin)) === 'y',
+      publish:
+        (await question('Publish y/n (n)', defaultOptions.publish)) === 'y',
+      registry: await question('Registry', defaultOptions.registry),
+    });
 
   return options;
 
@@ -90,9 +102,7 @@ function setupRepository(options) {
       cwd: options.dir,
       stdio: 'inherit',
     },
-    packageData = require(
-      path.resolve(options.dir, 'package.json')
-    ),
+    packageData = require(path.resolve(options.dir, 'package.json')),
     version = packageData.version,
     commands = [
       `git init`,
@@ -102,9 +112,11 @@ function setupRepository(options) {
       `git push -u origin master`,
       options.publish ? `yarn publish --new-version ${version}` : null,
     ];
-  commands.filter(command => !!command).forEach(command => {
-    childProcess.execSync(command, execOptions);
-  });
+  commands
+    .filter(command => !!command)
+    .forEach(command => {
+      childProcess.execSync(command, execOptions);
+    });
 }
 
 function installDependencies(options) {
@@ -135,10 +147,7 @@ function createBin(options) {
   if (!options.bin) return options;
   let filename = path.resolve(options.dir, `bin/${options.name}`);
   fs.mkdirSync(path.resolve(options.dir, 'bin'));
-  fs.writeFileSync(
-    filename,
-    `#!/usr/bin/env node\n'use strict';\n`
-  );
+  fs.writeFileSync(filename, `#!/usr/bin/env node\n'use strict';\n`);
   fs.chmodSync(filename, 0o777);
 }
 
@@ -147,14 +156,12 @@ function createFiles(options) {
   files.forEach(file => {
     fs.writeFileSync(
       path.resolve(options.dir, file),
-      fs.readFileSync(
-        path.resolve(__dirname, '../template', file),
-        'utf-8'
-      )
-        .replace(/\{\{name\}\}/mgi, options.name)
-        .replace(/\{\{description\}\}/mgi, options.description)
-        .replace(/\{\{authorUsername\}\}/mgi, options.authorUsername)
-        .replace(/\{\{authorEmail\}\}/mgi, options.authorEmail)
+      fs
+        .readFileSync(path.resolve(__dirname, '../template', file), 'utf-8')
+        .replace(/\{\{name\}\}/gim, options.name)
+        .replace(/\{\{description\}\}/gim, options.description)
+        .replace(/\{\{authorUsername\}\}/gim, options.authorUsername)
+        .replace(/\{\{authorEmail\}\}/gim, options.authorEmail)
     );
   });
   fs.renameSync(
@@ -195,27 +202,28 @@ function getPackage(options) {
       jest: '^26.6.3',
     },
     scripts: {
-      'test': 'node ./node_modules/.bin/jest',
+      test: 'node ./node_modules/.bin/jest',
     },
     author: {
-      'name': options.authorUsername,
-      'email': options.authorEmail,
+      name: options.authorUsername,
+      email: options.authorEmail,
     },
     repository: {
       type: 'git',
-      url: options.repository ||
+      url:
+        options.repository ||
         `git@${options.repo.host}:` +
           `${options.repo.user}/` +
-          `${options.name}.git`
+          `${options.name}.git`,
     },
     publish: !!options.publish,
     publishConfig: {
-      registry: options.registry || 'http://registry.npmjs.org/'
+      registry: options.registry || 'https://registry.npmjs.org/',
     },
   };
   if (options.bin) {
     data.bin = {
-      [options.name]: `./bin/${options.name}`
+      [options.name]: `./bin/${options.name}`,
     };
   }
   return data;
@@ -236,15 +244,17 @@ function mergeOptions(...datas) {
 function getDefaultOptions() {
   let options = {},
     dir = process.cwd(),
-    files = [];
+    homeOptions = path.resolve(process.env.HOME, '.qpackage.yaml'),
+    files = fs.existsSync(homeOptions) ? [homeOptions] : [];
   while (dir !== '/' && fs.existsSync(dir) && fs.statSync(dir).isDirectory()) {
     let filename = path.resolve(dir, '.qpackage.json');
     dir = path.resolve(dir, '..');
     if (!fs.existsSync(filename) || !fs.statSync(filename)) continue;
-    files.push(filename);
+    files.unshisf(filename);
   }
-  files.reverse().forEach(filename => {
-    Object.assign(options, require(filename));
+  files.forEach(filename => {
+    Object.assign(options, xyaml.loadFile(filename));
   });
+  console.log('OPTIONS', options);
   return options;
 }
